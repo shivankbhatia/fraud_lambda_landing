@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Real-Time Fraud Detection — Lambda Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────────────── */
+:root {
+  --bg:        #0B0E11;
+  --surface:   #131820;
+  --border:    #1E2530;
+  --muted:     #4A5568;
+  --text:      #E2E8F0;
+  --dim:       #94A3B8;
+
+  --teal:      #00C9B1;
+  --teal-dim:  #007A6D;
+  --amber:     #F59E0B;
+  --amber-dim: #92600A;
+  --purple:    #A78BFA;
+  --purple-dim:#5B3FA0;
+
+  --rail-w:    5px;
+  --station-r: 9px;
+
+  --font-head: 'Space Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+/* ── RESET ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+a { color: var(--teal); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── LAYOUT ─────────────────────────────────────────────── */
+.page { max-width: 960px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* ── HERO ───────────────────────────────────────────────── */
+.hero {
+  padding: 64px 0 8px;
+  text-align: center;
+}
+.hero-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--teal);
+  margin-bottom: 16px;
+}
+.hero h1 {
+  font-family: var(--font-head);
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  margin-bottom: 16px;
+}
+.hero h1 span.speed  { color: var(--teal); }
+.hero h1 span.batch  { color: var(--amber); }
+.hero h1 span.recon  { color: var(--purple); }
+.hero-sub {
+  max-width: 600px;
+  margin: 0 auto 32px;
+  color: var(--dim);
+  font-size: 16px;
+}
+
+/* ── KPI STRIP ──────────────────────────────────────────── */
+.kpi-strip {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 24px;
+  text-align: center;
+  min-width: 140px;
+}
+.kpi-val {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.kpi-label {
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.kpi-val.teal   { color: var(--teal); }
+.kpi-val.amber  { color: var(--amber); }
+.kpi-val.purple { color: var(--purple); }
+.kpi-val.white  { color: var(--text); }
+
+/* ── METRO MAP WRAPPER ──────────────────────────────────── */
+.metro-wrap {
+  margin: 40px 0 0;
+  position: relative;
+}
+.metro-wrap svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.demo-btn-wrap {
+  text-align: center;
+  margin: 20px 0 48px;
+}
+.demo-btn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid var(--teal);
+  color: var(--teal);
+  padding: 10px 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .18s, color .18s;
+}
+.demo-btn:hover {
+  background: var(--teal);
+  color: var(--bg);
+}
+.demo-btn:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+/* ── SECTION TITLES ─────────────────────────────────────── */
+.section-title {
+  font-family: var(--font-head);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  letter-spacing: -.01em;
+}
+.section-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+section { margin-bottom: 56px; }
+
+/* ── FINDING CARDS ──────────────────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.card.teal::before   { background: var(--teal); }
+.card.amber::before  { background: var(--amber); }
+.card.purple::before { background: var(--purple); }
+.card.white::before  { background: var(--dim); }
+.card-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.card h3 {
+  font-family: var(--font-head);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.card p {
+  font-size: 13px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+.card strong { color: var(--text); }
+
+/* ── DESIGN DECISIONS TABLE ─────────────────────────────── */
+.decisions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.decisions-table th {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 16px 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.decisions-table td {
+  padding: 14px 16px 14px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  color: var(--dim);
+  line-height: 1.5;
+}
+.decisions-table td:first-child {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: nowrap;
+  padding-right: 24px;
+  min-width: 220px;
+}
+.decisions-table tr:last-child td { border-bottom: none; }
+
+/* ── STACK CHIPS ────────────────────────────────────────── */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  background: var(--surface);
+}
+.chip.teal   { border-color: var(--teal-dim);   color: var(--teal); }
+.chip.amber  { border-color: var(--amber-dim);  color: var(--amber); }
+.chip.purple { border-color: var(--purple-dim); color: var(--purple); }
+
+/* ── TOOLTIP ────────────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 12px;
+  max-width: 220px;
+  opacity: 0;
+  transition: opacity .15s;
+  z-index: 10;
+  line-height: 1.5;
+}
+.tooltip.visible { opacity: 1; }
+.tooltip strong {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.tooltip span { color: var(--dim); }
+
+/* ── LIMITATIONS ────────────────────────────────────────── */
+.limits-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.limits-list li {
+  font-size: 13px;
+  color: var(--dim);
+  padding-left: 16px;
+  position: relative;
+  line-height: 1.55;
+}
+.limits-list li::before {
+  content: '—';
+  position: absolute;
+  left: 0;
+  color: var(--muted);
+}
+
+/* ── FOOTER ─────────────────────────────────────────────── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 28px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: .06em;
+}
+</style>
+</head>
+<body>
+<div class="page" id="app">
+
+<!-- ── HERO ──────────────────────────────────────────────── -->
+<header class="hero">
+  <p class="hero-eyebrow">Portfolio Project · Lambda Architecture</p>
+  <h1>Real-Time <span class="speed">Fraud Detection</span><br>meets <span class="batch">Batch Retraining</span>,<br>reconciled by <span class="recon">Delta Lake</span></h1>
+  <p class="hero-sub">Kafka + Flink score every transaction live. Spark retrains nightly. A reconciliation layer measures exactly where they disagree — and why.</p>
+</header>
+
+<!-- ── KPI STRIP ─────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi"><div class="kpi-val purple">98.43%</div><div class="kpi-label">Agreement Rate</div></div>
+  <div class="kpi"><div class="kpi-val teal">100%</div><div class="kpi-label">Speed Recall</div></div>
+  <div class="kpi"><div class="kpi-val white">24,327</div><div class="kpi-label">Transactions Joined</div></div>
+  <div class="kpi"><div class="kpi-val amber">28</div><div class="kpi-label">Confirmed Fraud Cases</div></div>
+</div>
+
+<!-- ── METRO MAP ──────────────────────────────────────────── -->
+<div class="metro-wrap">
+<svg id="metro" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" aria-label="Lambda architecture metro map">
+  <defs>
+    <!-- glow filters -->
+    <filter id="glow-teal" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- train marker clips -->
+    <clipPath id="train-clip-speed">
+      <circle r="10"/>
+    </clipPath>
+    <clipPath id="train-clip-batch">
+      <circle r="10"/>
+    </clipPath>
+
+    <!-- track paths used for animation (invisible) -->
+    <!--
+      TRUNK: 80,260 → fork at 280,260
+      SPEED: fork 280,260 → curve up → flink 390,148 → delta 560,148 → curve down → merge 680,260
+      BATCH: fork 280,260 → curve down → spark 390,372 → retrain 560,372 → curve up → merge 680,260
+      RECON: merge 680,260 → recon 720,260 → streamlit 860,260
+    -->
+    <path id="path-trunk"
+      d="M 60,260 L 280,260"
+      fill="none"/>
+    <path id="path-speed"
+      d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
+      fill="none"/>
+    <path id="path-batch"
+      d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
+      fill="none"/>
+    <path id="path-recon"
+      d="M 680,260 L 880,260"
+      fill="none"/>
+  </defs>
+
+  <!-- ── BACKGROUND GRID (subtle) ───────────────────────── -->
+  <rect width="900" height="520" fill="transparent"/>
+
+  <!-- ── TRACK RAILS ────────────────────────────────────── -->
+  <!-- Trunk rail (teal, pre-fork) -->
+  <path d="M 60,260 L 280,260"
+    stroke="#007A6D" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Speed track rail (teal) -->
+  <path d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
+    stroke="#007A6D" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Batch track rail (amber) -->
+  <path d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
+    stroke="#92600A" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- Reconciliation rail (purple) -->
+  <path d="M 680,260 L 880,260"
+    stroke="#5B3FA0" stroke-width="5" stroke-linecap="round" fill="none"/>
+
+  <!-- ── ACTIVE GLOW (overlaid, same paths, thinner + bright) ── -->
+  <path d="M 60,260 L 280,260"
+    stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
+  <path d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
+    stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
+  <path d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
+    stroke="#F59E0B" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
+  <path d="M 680,260 L 880,260"
+    stroke="#A78BFA" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
+
+  <!-- ── FORK DOT ────────────────────────────────────────── -->
+  <circle cx="280" cy="260" r="7" fill="#131820" stroke="#4A5568" stroke-width="2"/>
+  <circle cx="280" cy="260" r="3" fill="#4A5568"/>
+
+  <!-- ── MERGE DOT ───────────────────────────────────────── -->
+  <circle cx="680" cy="260" r="7" fill="#131820" stroke="#A78BFA" stroke-width="2"/>
+  <circle cx="680" cy="260" r="3" fill="#A78BFA"/>
+
+  <!-- ── STATION: KAFKA ─────────────────────────────────── -->
+  <g class="station" data-id="kafka" style="cursor:pointer">
+    <circle cx="80" cy="260" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
+    <circle cx="80" cy="260" r="5" fill="#00C9B1"/>
+    <text x="80" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">KAFKA</text>
+    <text x="80" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Ingestion</text>
+  </g>
+
+  <!-- ── STATION: FLINK ─────────────────────────────────── -->
+  <g class="station" data-id="flink" style="cursor:pointer">
+    <circle cx="390" cy="148" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
+    <circle cx="390" cy="148" r="5" fill="#00C9B1"/>
+    <text x="390" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">FLINK</text>
+    <text x="390" y="142" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Speed Layer</text>
+    <!-- speed track label -->
+    <text x="310" y="110" font-family="IBM Plex Mono,monospace" font-size="10" fill="#00C9B1" opacity=".6" letter-spacing=".06em">▲ speed track</text>
+  </g>
+
+  <!-- ── STATION: DELTA LAKE ───────────────────────────── -->
+  <g class="station" data-id="delta" style="cursor:pointer">
+    <circle cx="560" cy="148" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
+    <circle cx="560" cy="148" r="5" fill="#00C9B1"/>
+    <text x="560" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">DELTA LAKE</text>
+    <text x="560" y="142" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Speed Store</text>
+  </g>
+
+  <!-- ── STATION: SPARK + HIVE ─────────────────────────── -->
+  <g class="station" data-id="spark" style="cursor:pointer">
+    <circle cx="390" cy="372" r="11" fill="#131820" stroke="#F59E0B" stroke-width="2.5"/>
+    <circle cx="390" cy="372" r="5" fill="#F59E0B"/>
+    <text x="390" y="396" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#F59E0B" letter-spacing="0.08em">SPARK + HIVE</text>
+    <text x="390" y="408" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Batch Layer</text>
+    <!-- batch track label -->
+    <text x="310" y="432" font-family="IBM Plex Mono,monospace" font-size="10" fill="#F59E0B" opacity=".6" letter-spacing=".06em">▼ batch track</text>
+  </g>
+
+  <!-- ── STATION: BATCH RETRAIN ────────────────────────── -->
+  <g class="station" data-id="retrain" style="cursor:pointer">
+    <circle cx="560" cy="372" r="11" fill="#131820" stroke="#F59E0B" stroke-width="2.5"/>
+    <circle cx="560" cy="372" r="5" fill="#F59E0B"/>
+    <text x="560" y="396" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#F59E0B" letter-spacing="0.08em">BATCH RETRAIN</text>
+    <text x="560" y="408" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Day-5 Model</text>
+  </g>
+
+  <!-- ── STATION: RECONCILIATION ──────────────────────── -->
+  <g class="station" data-id="recon" style="cursor:pointer">
+    <circle cx="720" cy="260" r="13" fill="#131820" stroke="#A78BFA" stroke-width="3"/>
+    <circle cx="720" cy="260" r="6" fill="#A78BFA"/>
+    <text x="720" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#A78BFA" letter-spacing="0.08em">RECONCILIATION</text>
+    <text x="720" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#A78BFA" opacity=".6">98.43% agreement</text>
+  </g>
+
+  <!-- ── STATION: STREAMLIT ───────────────────────────── -->
+  <g class="station" data-id="streamlit" style="cursor:pointer">
+    <circle cx="860" cy="260" r="11" fill="#131820" stroke="#A78BFA" stroke-width="2.5"/>
+    <circle cx="860" cy="260" r="5" fill="#A78BFA"/>
+    <text x="860" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#A78BFA" letter-spacing="0.08em">STREAMLIT</text>
+    <text x="860" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Dashboard</text>
+  </g>
+
+  <!-- ── TRAINS (positioned by JS) ────────────────────── -->
+  <g id="train-speed" opacity="0">
+    <circle r="9" fill="#00C9B1" filter="url(#glow-teal)"/>
+    <circle r="5" fill="#0B0E11"/>
+  </g>
+  <g id="train-batch" opacity="0">
+    <circle r="9" fill="#F59E0B" filter="url(#glow-amber)"/>
+    <circle r="5" fill="#0B0E11"/>
+  </g>
+  <g id="train-merge" opacity="0">
+    <circle r="9" fill="#A78BFA" filter="url(#glow-purple)"/>
+    <circle r="5" fill="#0B0E11"/>
+  </g>
+</svg>
+<div class="tooltip" id="tooltip"></div>
+</div>
+
+<div class="demo-btn-wrap">
+  <button class="demo-btn" id="demoBtn">▶ Send Transactions</button>
+</div>
+
+<!-- ── KEY FINDINGS ──────────────────────────────────────── -->
+<section>
+  <p class="section-eyebrow">Analysis</p>
+  <h2 class="section-title">Key Findings</h2>
+  <div class="cards">
+    <div class="card teal">
+      <div class="card-num">01 / Data Investigation</div>
+      <h3>Leakage Discovered and Eliminated</h3>
+      <p>An early feature (<strong>orig_balance_error</strong>) achieved <strong>0.947 AUC alone</strong> — a red flag. Root cause: 32.9% of legit transactions have zero-value balances in PaySim, while 99.5% of fraud shows perfect balance reconciliation. A simulator artifact, not a real signal. Dropped.</p>
+    </div>
+    <div class="card amber">
+      <div class="card-num">02 / Distribution Shift</div>
+      <h3>Non-Obvious Temporal Drift</h3>
+      <p>PaySim's legit volume collapses after step ~400 while absolute fraud count stays flat — fraud rate varies <strong>20×+</strong> across the timeline. Addressed with walk-forward validation across <strong>5 temporal folds</strong> rather than a single random split.</p>
+    </div>
+    <div class="card white">
+      <div class="card-num">03 / Model Performance</div>
+      <h3>Consistent Across Both Engines</h3>
+      <p>XGBoost, 4 features. Walk-forward: <strong>AUC 0.9995 ± 0.0003</strong>, PR-AUC 0.940 ± 0.049. Batch-retrained (Day 5): AUC 0.9996, PR-AUC 0.957 — confirming reproducibility across pandas/Flink vs Spark execution paths.</p>
+    </div>
+    <div class="card purple">
+      <div class="card-num">04 / Reconciliation</div>
+      <h3>Cold-Start Explains the Gap</h3>
+      <p>Speed layer achieves <strong>100% recall</strong>; batch missed 1 fraud case. The 1.57% disagreement traces almost entirely to <strong>dest_txn_count_so_far</strong> — Flink's state starts at 0 on startup, Spark has complete history. An architectural tradeoff, not a bug.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── DESIGN DECISIONS ──────────────────────────────────── -->
+<section>
+  <p class="section-eyebrow">Architecture</p>
+  <h2 class="section-title">Design Decisions &amp; Tradeoffs</h2>
+  <table class="decisions-table">
+    <thead>
+      <tr><th>Decision</th><th>Reasoning</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Filter to TRANSFER / CASH_OUT</td>
+        <td>100% of fraud lives in these two types. Drops stream volume ~56% with zero recall loss — reduces state footprint and compute load in Flink before any scoring happens.</td>
+      </tr>
+      <tr>
+        <td>Processing-time, no watermarks</td>
+        <td>Kafka's per-key ordering guarantee (keyed by nameDest) was sufficient for this project's correctness needs. Event-time watermarking is a documented production gap, not an oversight.</td>
+      </tr>
+      <tr>
+        <td>Flink local execution mode</td>
+        <td>The official Flink Docker image lacks Python/JDK-dev headers for PyFlink's native dependencies (pemja). Local mode is a standard, documented PyFlink execution mode — not a workaround.</td>
+      </tr>
+      <tr>
+        <td>Flink → staged files → Spark → Delta</td>
+        <td>Delta's write path is Spark-native. Staging decouples the two runtimes cleanly rather than loading a full Spark session inside Flink's per-record hot path.</td>
+      </tr>
+      <tr>
+        <td>Composite txn_key</td>
+        <td>Flink's live stream and the batch CSV share no natural identifier. nameOrig|nameDest|step|amount gives both sides an independently derivable join key from data each already has.</td>
+      </tr>
+      <tr>
+        <td>Delta MERGE over blind append</td>
+        <td>Makes the staging-to-Delta commit idempotent — safe to re-run over the same staged files without duplicating records. ACID semantics as a side-effect.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── STACK ─────────────────────────────────────────────── -->
+<section>
+  <p class="section-eyebrow">Stack</p>
+  <h2 class="section-title">Technologies Used</h2>
+  <div class="chips">
+    <span class="chip teal">Apache Kafka</span>
+    <span class="chip teal">Apache Flink · PyFlink</span>
+    <span class="chip amber">Apache Spark</span>
+    <span class="chip amber">Hive Metastore</span>
+    <span class="chip teal">Delta Lake</span>
+    <span class="chip purple">XGBoost</span>
+    <span class="chip purple">Streamlit</span>
+    <span class="chip">Docker Compose</span>
+    <span class="chip">Python</span>
+    <span class="chip">PaySim Dataset</span>
+  </div>
+</section>
+
+<!-- ── KNOWN LIMITATIONS ──────────────────────────────────── -->
+<section>
+  <p class="section-eyebrow">Honesty</p>
+  <h2 class="section-title">Known Limitations</h2>
+  <ul class="limits-list">
+    <li><strong>txn_key uniqueness</strong> is not formally guaranteed — collisions possible with identical nameOrig/nameDest/step/amount. Acceptable for PaySim's characteristics, not production-grade.</li>
+    <li><strong>Float formatting</strong> between Python (Flink) and Spark for the amount component of txn_key was spot-checked, not exhaustively verified across edge cases.</li>
+    <li><strong>Hive Metastore path</strong> is bind-mounted to an absolute local path — would need S3-backed storage for portability.</li>
+    <li><strong>Sample size</strong> (24,327 joined transactions, 28 fraud cases) is adequate for directional conclusions but small by rigorous statistical standards.</li>
+    <li><strong>No event-time watermarking</strong> — acceptable given Kafka's ordering guarantees here, but a real production requirement for out-of-order tolerance.</li>
+  </ul>
+</section>
+
+</div><!-- /.page -->
+
+<footer>
+  <span>Real-Time Fraud Detection · Lambda Architecture · PaySim Dataset</span>
+</footer>
+<script>
+// ── TRAIN ANIMATION ───────────────────────────────────────
+(function() {
+  const DURATION_TRUNK  = 800;   // ms: Kafka → fork
+  const DURATION_TRACKS = 1400;  // ms: fork → merge (both tracks simultaneously)
+  const DURATION_RECON  = 900;   // ms: merge → dashboard
+
+  function getPathLength(id) {
+    return document.getElementById(id).getTotalLength();
+  }
+
+  function pointAt(pathId, t) {
+    const p = document.getElementById(pathId);
+    const len = p.getTotalLength();
+    return p.getPointAtLength(Math.min(t, 1) * len);
+  }
+
+  function placeTrain(trainId, pt) {
+    const g = document.getElementById(trainId);
+    g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
+  }
+
+  function fadeIn(trainId) {
+    document.getElementById(trainId).setAttribute('opacity', '1');
+  }
+  function fadeOut(trainId) {
+    document.getElementById(trainId).setAttribute('opacity', '0');
+  }
+
+  function pulseStation(stationId) {
+    const g = document.querySelector(`[data-id="${stationId}"] circle:first-child`);
+    if (!g) return;
+    const orig = g.getAttribute('r');
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      const t = (ts - start) / 300;
+      if (t < 1) {
+        const scale = 1 + 0.5 * Math.sin(t * Math.PI);
+        g.setAttribute('r', parseFloat(orig) * scale);
+        requestAnimationFrame(step);
+      } else {
+        g.setAttribute('r', orig);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function animate(btn) {
+    btn.disabled = true;
+    let startTs = null;
+
+    // Phase 1: trunk (both trains together as one teal dot)
+    fadeIn('train-speed');
+    placeTrain('train-speed', pointAt('path-trunk', 0));
+
+    function phase1(ts) {
+      if (!startTs) startTs = ts;
+      const t = (ts - startTs) / DURATION_TRUNK;
+      if (t < 1) {
+        placeTrain('train-speed', pointAt('path-trunk', t));
+        requestAnimationFrame(phase1);
+      } else {
+        placeTrain('train-speed', pointAt('path-trunk', 1));
+        // Fork: launch batch train too
+        fadeIn('train-batch');
+        placeTrain('train-batch', pointAt('path-trunk', 1));
+        pulseStation('kafka');
+        startTs = null;
+        requestAnimationFrame(phase2);
+      }
+    }
+
+    // Phase 2: both tracks in parallel
+    function phase2(ts) {
+      if (!startTs) startTs = ts;
+      const t = (ts - startTs) / DURATION_TRACKS;
+      if (t < 1) {
+        placeTrain('train-speed', pointAt('path-speed', t));
+        placeTrain('train-batch', pointAt('path-batch', t));
+        requestAnimationFrame(phase2);
+      } else {
+        placeTrain('train-speed', pointAt('path-speed', 1));
+        placeTrain('train-batch', pointAt('path-batch', 1));
+        // Merge: hide both, show purple
+        fadeOut('train-speed');
+        fadeOut('train-batch');
+        fadeIn('train-merge');
+        placeTrain('train-merge', pointAt('path-recon', 0));
+        pulseStation('flink');
+        pulseStation('spark');
+        pulseStation('delta');
+        pulseStation('retrain');
+        startTs = null;
+        requestAnimationFrame(phase3);
+      }
+    }
+
+    // Phase 3: reconciliation track
+    function phase3(ts) {
+      if (!startTs) startTs = ts;
+      const t = (ts - startTs) / DURATION_RECON;
+      if (t < 1) {
+        placeTrain('train-merge', pointAt('path-recon', t));
+        requestAnimationFrame(phase3);
+      } else {
+        placeTrain('train-merge', pointAt('path-recon', 1));
+        pulseStation('recon');
+        pulseStation('streamlit');
+        // Fade out and re-enable
+        setTimeout(() => {
+          fadeOut('train-merge');
+          btn.disabled = false;
+        }, 600);
+      }
+    }
+
+    requestAnimationFrame(phase1);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('demoBtn');
+    if (btn) btn.addEventListener('click', () => animate(btn));
+
+    // ── TOOLTIPS ─────────────────────────────────────────
+    const tip = document.getElementById('tooltip');
+    const metroWrap = document.querySelector('.metro-wrap');
+
+    document.querySelectorAll('.station').forEach(g => {
+      g.addEventListener('mouseenter', function(e) {
+        const id = this.dataset.id;
+        const s = (window.STATIONS || []).find(s => s.id === id);
+        if (!s) return;
+        tip.innerHTML = `<strong>${s.label}</strong><span>${s.desc}</span>`;
+        tip.classList.add('visible');
+      });
+      g.addEventListener('mousemove', function(e) {
+        const rect = metroWrap.getBoundingClientRect();
+        let left = e.clientX - rect.left + 14;
+        let top  = e.clientY - rect.top  - 10;
+        if (left + 230 > rect.width) left = e.clientX - rect.left - 234;
+        tip.style.left = left + 'px';
+        tip.style.top  = top  + 'px';
+      });
+      g.addEventListener('mouseleave', function() {
+        tip.classList.remove('visible');
+      });
+    });
+  });
+})();
+
+// ── CONTENT DATA ─────────────────────────────────────────
+const STATIONS = [
+  {
+    id: 'kafka', x: 80, y: 260, track: 'trunk',
+    label: 'KAFKA', sub: 'Ingestion',
+    desc: 'Python producer replays PaySim as a live time-ordered stream, keyed by nameDest to preserve per-account ordering for stateful downstream processing.'
+  },
+  {
+    id: 'flink', x: 390, y: 148, track: 'speed',
+    label: 'FLINK', sub: 'Speed Layer',
+    desc: 'PyFlink KeyedProcessFunction maintains per-account running txn count in ValueState, scores each record against a pre-trained XGBoost model in real time.'
+  },
+  {
+    id: 'delta', x: 560, y: 148, track: 'speed',
+    label: 'DELTA LAKE', sub: 'Speed Store',
+    desc: 'Flink staged output committed via Spark MERGE — idempotent, ACID writes, time-travel queries. Safe to re-run without duplicating records.'
+  },
+  {
+    id: 'spark', x: 390, y: 372, track: 'batch',
+    label: 'SPARK + HIVE', sub: 'Batch Layer',
+    desc: 'Reads full labeled historical dataset, recomputes features via window functions, writes curated predictions to Hive table (Postgres-backed metastore).'
+  },
+  {
+    id: 'retrain', x: 560, y: 372, track: 'batch',
+    label: 'BATCH RETRAIN', sub: 'Day-5 Model',
+    desc: 'Retrains XGBoost on complete historical data. AUC 0.9996, PR-AUC 0.957 — consistent with speed layer, confirming reproducibility across pandas vs Spark.'
+  },
+  {
+    id: 'recon', x: 720, y: 260, track: 'recon',
+    label: 'RECONCILIATION', sub: 'Agreement Layer',
+    desc: '98.43% agreement on 24,327 joined transactions. Speed layer: 100% recall. Batch: missed 1 fraud case. Root cause: cold-start dest_txn_count_so_far delta.'
+  },
+  {
+    id: 'streamlit', x: 860, y: 260, track: 'recon',
+    label: 'STREAMLIT', sub: 'Dashboard',
+    desc: 'Surfaces reconciliation KPIs and disagreement cases. Shows speed vs batch prediction drift, agreement rate, and per-case drill-down.'
+  }
+];
+</script>
+</body>
+</html>
