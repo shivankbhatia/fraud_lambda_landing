@@ -564,29 +564,40 @@ footer {
 </footer>
 <script>
 // ── MULTI-TRAIN ANIMATION ─────────────────────────────────
-// Timing is proportional to real pipeline latency:
-//   Kafka ingestion:   ~77µs/msg at 13k msg/s  → 300ms  (trunk, near-instant)
-//   Flink scoring:     ~2–5ms per record        → 700ms  (fast hot path)
-//   Delta MERGE:       ~3–5s (Spark commit)     → 1200ms (noticeable pause)
-//   Batch retraining:  minutes–hours            → 4000ms (visibly slow)
-//   Flink checkpoint:  10–15s                   → fires every ~12s independently
-//   Reconciliation:    seconds                  → 600ms
-//   Dashboard:         instant                  → 300ms
+// Timing proportional to real pipeline latency:
+//   Kafka ingestion  ~77µs/msg @ 13k/s  → 400ms  trunk
+//   Flink scoring    ~2–5ms/record       → 1200ms fork→Flink, then 800ms Flink→Delta
+//   Delta MERGE      ~3–5s Spark commit  → 1000ms Delta→merge
+//   Batch (Spark)    minutes–hours       → 4500ms total (visibly slow vs speed)
+//   Flink checkpoint 10–15s              → independent pulse every 12s
+//   Reconciliation   seconds             → 700ms
+//   Dashboard        instant             → 300ms
 (function() {
   // ── TIMING (ms) ────────────────────────────────────────
-  const T_TRUNK   = 300;   // Kafka → fork
-  const T_SPEED   = 700;   // fork → Flink → Delta → merge (speed path)
-  const T_BATCH   = 4000;  // fork → Spark → Retrain → merge (batch path)
-  const T_RECON   = 600;   // merge → Reconciliation
-  const T_DASH    = 300;   // Reconciliation → Streamlit
+  const T_TRUNK        = 400;   // Kafka → fork
+  const T_SPEED_TO_FLINK = 1200; // fork → Flink station
+  const T_FLINK_TO_DELTA = 800;  // Flink → Delta (scoring hot path)
+  const T_DELTA_TO_MERGE = 600;  // Delta → merge point
+  const T_BATCH        = 4500;  // fork → merge (full batch path, slow)
+  const T_RECON        = 700;   // merge → Reconciliation
+  const T_DASH         = 300;   // Reconciliation → Streamlit
+
+  // ── BASE RADII (fixed, never read from DOM) ─────────────
+  // Prevents concurrent pulses from compounding the radius
+  const BASE_R = {
+    kafka:     14,
+    flink:     14,
+    delta:     14,
+    spark:     14,
+    retrain:   14,
+    recon:     17,
+    streamlit: 14,
+  };
 
   // ── STATE ───────────────────────────────────────────────
   let trainCounter = 0;
   const activeTrains = new Set();
-  const layer = document.getElementById('train-layer');
-
-  // Checkpoint pulse fires every 12s on the Flink station
-  setInterval(() => pulseStation('flink', '#00C9B1', 2.2), 12000);
+  let layer; // assigned after DOM ready
 
   // ── HELPERS ─────────────────────────────────────────────
   function pointAt(pathId, t) {
@@ -596,8 +607,7 @@ footer {
   }
 
   function makeDot(type) {
-    // type: 'speed' | 'batch' | 'merge'
-    const colors = { speed: '#00C9B1', batch: '#F59E0B', merge: '#A78BFA' };
+    const colors  = { speed: '#00C9B1', batch: '#F59E0B', merge: '#A78BFA' };
     const filters = { speed: 'url(#glow-teal)', batch: 'url(#glow-amber)', merge: 'url(#glow-purple)' };
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.setAttribute('opacity', '0');
@@ -628,28 +638,29 @@ footer {
     if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
   }
 
-  function pulseStation(stationId, color, scale) {
+  // Fix: use BASE_R constants — never read r from DOM, so concurrent
+  // pulses cannot compound each other and blow up the radius.
+  function pulseStation(stationId, scaleFactor) {
     const outer = document.querySelector(`[data-id="${stationId}"] circle:first-child`);
     if (!outer) return;
-    const orig = parseFloat(outer.getAttribute('r'));
-    const target = orig * (scale || 1.8);
+    const orig   = BASE_R[stationId];          // always the fixed base value
+    const target = orig * (scaleFactor || 1.7);
     let start = null;
     function step(ts) {
       if (!start) start = ts;
-      const t = (ts - start) / 400;
+      const t = (ts - start) / 380;
       if (t < 1) {
         const r = orig + (target - orig) * Math.sin(t * Math.PI);
         outer.setAttribute('r', r.toFixed(2));
         requestAnimationFrame(step);
       } else {
-        outer.setAttribute('r', orig.toFixed(2));
+        outer.setAttribute('r', orig.toFixed(2)); // always restore to constant
       }
     }
     requestAnimationFrame(step);
   }
 
   // ── TWEEN ───────────────────────────────────────────────
-  // Moves dot along pathId from t=0→1 over `duration` ms, then calls cb
   function tween(dot, pathId, duration, cb) {
     let start = null;
     function step(ts) {
@@ -666,19 +677,38 @@ footer {
     requestAnimationFrame(step);
   }
 
+  // ── PARTIAL PATH TWEEN ──────────────────────────────────
+  // Moves dot along a segment of pathId from t0→t1 over duration ms
+  function tweenSegment(dot, pathId, t0, t1, duration, cb) {
+    const p   = document.getElementById(pathId);
+    const len = p.getTotalLength();
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const t = t0 + (t1 - t0) * progress;
+      const pt = p.getPointAtLength(t * len);
+      dot.setAttribute('transform', `translate(${pt.x.toFixed(2)},${pt.y.toFixed(2)})`);
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else if (cb) {
+        cb();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
   // ── LATENCY BADGE ───────────────────────────────────────
   let latencyStart = null;
   let latencyAnimId = null;
 
   function startLatencyTimer() {
     latencyStart = performance.now();
-    const badge = document.getElementById('latency-badge');
-    const txt   = document.getElementById('latency-text');
-    badge.setAttribute('opacity', '1');
-
+    document.getElementById('latency-badge').setAttribute('opacity', '1');
     function tick() {
       const ms = performance.now() - latencyStart;
-      txt.textContent = ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms/1000).toFixed(2)} s`;
+      document.getElementById('latency-text').textContent =
+        ms < 1000 ? ms.toFixed(0) + ' ms' : (ms/1000).toFixed(2) + ' s';
       latencyAnimId = requestAnimationFrame(tick);
     }
     if (latencyAnimId) cancelAnimationFrame(latencyAnimId);
@@ -687,104 +717,138 @@ footer {
 
   function stopLatencyTimer(finalMs) {
     if (latencyAnimId) { cancelAnimationFrame(latencyAnimId); latencyAnimId = null; }
-    const txt = document.getElementById('latency-text');
-    const s   = finalMs / 1000;
-    txt.textContent = s < 1 ? `${finalMs.toFixed(0)} ms` : `${s.toFixed(2)} s`;
-    // fade badge out after 2.5s
-    setTimeout(() => {
+    const s = finalMs / 1000;
+    document.getElementById('latency-text').textContent =
+      s < 1 ? finalMs.toFixed(0) + ' ms' : s.toFixed(2) + ' s';
+    setTimeout(function() {
       document.getElementById('latency-badge').setAttribute('opacity', '0');
     }, 2500);
   }
 
+  // ── PARTIAL PATH TWEEN ──────────────────────────────────
+  // Animates dot along a sub-segment [t0, t1] of pathId over duration ms
+  function tweenSegment(dot, pathId, t0, t1, duration, cb) {
+    var p   = document.getElementById(pathId);
+    var len = p.getTotalLength();
+    var start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var t = t0 + (t1 - t0) * progress;
+      var pt = p.getPointAtLength(t * len);
+      dot.setAttribute('transform', 'translate(' + pt.x.toFixed(2) + ',' + pt.y.toFixed(2) + ')');
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else if (cb) {
+        cb();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
   // ── LAUNCH TRAIN ────────────────────────────────────────
+  // Speed path split into 3 segments so Flink and Delta each get
+  // a distinct arrival pulse with realistic relative timing.
+  // Batch path is one slow tween — visibly slower than speed.
   function launchTrain() {
-    const id = ++trainCounter;
-    const isFirst = activeTrains.size === 0;
+    var id = ++trainCounter;
+    var isFirst = activeTrains.size === 0;
     activeTrains.add(id);
-
     if (isFirst) startLatencyTimer();
+    var tStart = performance.now();
 
-    const tStart = performance.now();
+    // t-values where Flink (cx=430) and Delta (cx=650) sit on path-speed
+    // path-speed: fork(280) → Flink(430) → Delta(650) → merge(800)
+    // Approximate: Flink ~35% along the arc, Delta ~65%
+    var T_FLINK_POS = 0.35;
+    var T_DELTA_POS = 0.65;
 
-    const speedDot = makeDot('speed');
-    const batchDot = makeDot('batch');
+    var speedDot = makeDot('speed');
+    var batchDot = makeDot('batch');
 
-    // Phase 1: trunk — single teal dot, Kafka ingestion
+    // Phase 1: trunk (Kafka ingestion — fast)
     place(speedDot, pointAt('path-trunk', 0));
     show(speedDot);
-    pulseStation('kafka', '#00C9B1');
+    pulseStation('kafka');
 
-    tween(speedDot, 'path-trunk', T_TRUNK, () => {
-      // Phase 2: fork — speed and batch launch simultaneously
-      place(batchDot, pointAt('path-speed', 0));
+    tween(speedDot, 'path-trunk', T_TRUNK, function() {
+
+      // Phase 2: fork — both tracks start simultaneously
+      place(batchDot, pointAt('path-batch', 0));
       show(batchDot);
-      pulseStation('flink', '#00C9B1');
-      pulseStation('spark', '#F59E0B');
+      pulseStation('spark');
 
-      let speedDone = false;
-      let batchDone = false;
+      var speedDone = false;
+      var batchDone = false;
 
-      const mergeDot = makeDot('merge');
-
-      function onTrackDone() {
+      function onBothDone() {
         if (!speedDone || !batchDone) return;
-        // Both tracks arrived at merge — show purple
         hide(speedDot); removeDot(speedDot);
         hide(batchDot); removeDot(batchDot);
+
+        var mergeDot = makeDot('merge');
         place(mergeDot, pointAt('path-recon', 0));
         show(mergeDot);
-        pulseStation('delta',   '#00C9B1');
-        pulseStation('retrain', '#F59E0B');
 
-        // Phase 3: recon track
-        tween(mergeDot, 'path-recon', T_RECON + T_DASH, () => {
-          pulseStation('recon',      '#A78BFA', 2.2);
-          pulseStation('streamlit',  '#A78BFA');
-          setTimeout(() => {
+        // Phase 3: reconciliation track
+        tween(mergeDot, 'path-recon', T_RECON + T_DASH, function() {
+          pulseStation('recon', 1.6);
+          pulseStation('streamlit');
+          setTimeout(function() {
             hide(mergeDot); removeDot(mergeDot);
             activeTrains.delete(id);
-            if (activeTrains.size === 0) {
-              stopLatencyTimer(performance.now() - tStart);
-            }
+            if (activeTrains.size === 0) stopLatencyTimer(performance.now() - tStart);
           }, 400);
         });
       }
 
-      // Speed path (fast — Flink hot path)
-      tween(speedDot, 'path-speed', T_SPEED, () => {
-        speedDone = true;
-        onTrackDone();
+      // Batch: single slow tween (simulates Spark window functions + retrain)
+      tween(batchDot, 'path-batch', T_BATCH, function() {
+        pulseStation('retrain');
+        batchDone = true;
+        onBothDone();
       });
 
-      // Batch path (slow — Spark window functions + retrain)
-      tween(batchDot, 'path-batch', T_BATCH, () => {
-        batchDone = true;
-        onTrackDone();
+      // Speed: 3 segments — fork→Flink, Flink→Delta, Delta→merge
+      tweenSegment(speedDot, 'path-speed', 0, T_FLINK_POS, T_SPEED_TO_FLINK, function() {
+        pulseStation('flink');
+        tweenSegment(speedDot, 'path-speed', T_FLINK_POS, T_DELTA_POS, T_FLINK_TO_DELTA, function() {
+          pulseStation('delta');
+          tweenSegment(speedDot, 'path-speed', T_DELTA_POS, 1, T_DELTA_TO_MERGE, function() {
+            speedDone = true;
+            onBothDone();
+          });
+        });
       });
     });
   }
 
-  // ── BUTTON ──────────────────────────────────────────────
+  // ── INIT ────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.getElementById('demoBtn');
+    layer = document.getElementById('train-layer');
+
+    // Checkpoint pulse: fires every 12s independently, simulates Flink checkpoint interval
+    setInterval(function() { pulseStation('flink', 1.5); }, 12000);
+
+    var btn = document.getElementById('demoBtn');
     if (btn) btn.addEventListener('click', launchTrain);
 
     // ── TOOLTIPS ─────────────────────────────────────────
-    const tip = document.getElementById('tooltip');
-    const metroWrap = document.querySelector('.metro-wrap');
+    var tip = document.getElementById('tooltip');
+    var metroWrap = document.querySelector('.metro-wrap');
 
-    document.querySelectorAll('.station').forEach(g => {
+    document.querySelectorAll('.station').forEach(function(g) {
       g.addEventListener('mouseenter', function() {
-        const id = this.dataset.id;
-        const s = (window.STATIONS || []).find(s => s.id === id);
+        var sid = this.dataset.id;
+        var s = (window.STATIONS || []).find(function(x) { return x.id === sid; });
         if (!s) return;
-        tip.innerHTML = `<strong>${s.label}</strong><span>${s.desc}</span>`;
+        tip.innerHTML = '<strong>' + s.label + '</strong><span>' + s.desc + '</span>';
         tip.classList.add('visible');
       });
       g.addEventListener('mousemove', function(e) {
-        const rect = metroWrap.getBoundingClientRect();
-        let left = e.clientX - rect.left + 14;
-        let top  = e.clientY - rect.top  - 10;
+        var rect = metroWrap.getBoundingClientRect();
+        var left = e.clientX - rect.left + 14;
+        var top  = e.clientY - rect.top  - 10;
         if (left + 230 > rect.width) left = e.clientX - rect.left - 234;
         tip.style.left = left + 'px';
         tip.style.top  = top  + 'px';
