@@ -342,168 +342,123 @@ footer {
 
 <!-- ── METRO MAP ──────────────────────────────────────────── -->
 <div class="metro-wrap">
-<svg id="metro" viewBox="0 0 900 520" xmlns="http://www.w3.org/2000/svg" aria-label="Lambda architecture metro map">
+<svg id="metro" viewBox="0 0 1100 560" xmlns="http://www.w3.org/2000/svg" aria-label="Lambda architecture metro map">
   <defs>
-    <!-- glow filters -->
-    <filter id="glow-teal" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glow-amber" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-    <filter id="glow-purple" x="-50%" y="-50%" width="200%" height="200%">
+    <filter id="glow-teal" x="-60%" y="-60%" width="220%" height="220%">
       <feGaussianBlur stdDeviation="4" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="glow-amber" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-purple" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-station" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
 
-    <!-- train marker clips -->
-    <clipPath id="train-clip-speed">
-      <circle r="10"/>
-    </clipPath>
-    <clipPath id="train-clip-batch">
-      <circle r="10"/>
-    </clipPath>
+    <!-- invisible animation paths -->
+    <path id="path-trunk" d="M 55,280 L 280,280" fill="none"/>
+    <path id="path-speed" d="M 280,280 C 320,280 360,120 430,120 L 650,120 C 720,120 760,280 800,280" fill="none"/>
+    <path id="path-batch" d="M 280,280 C 320,280 360,440 430,440 L 650,440 C 720,440 760,280 800,280" fill="none"/>
+    <path id="path-recon" d="M 800,280 L 1060,280" fill="none"/>
 
-    <!-- track paths used for animation (invisible) -->
-    <!--
-      TRUNK: 80,260 → fork at 280,260
-      SPEED: fork 280,260 → curve up → flink 390,148 → delta 560,148 → curve down → merge 680,260
-      BATCH: fork 280,260 → curve down → spark 390,372 → retrain 560,372 → curve up → merge 680,260
-      RECON: merge 680,260 → recon 720,260 → streamlit 860,260
-    -->
-    <path id="path-trunk"
-      d="M 60,260 L 280,260"
-      fill="none"/>
-    <path id="path-speed"
-      d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
-      fill="none"/>
-    <path id="path-batch"
-      d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
-      fill="none"/>
-    <path id="path-recon"
-      d="M 680,260 L 880,260"
-      fill="none"/>
+    <!-- train pool template (cloned by JS) -->
+    <g id="train-tpl-speed">
+      <circle r="10" fill="#00C9B1" filter="url(#glow-teal)"/>
+      <circle r="5"  fill="#0B0E11"/>
+    </g>
+    <g id="train-tpl-batch">
+      <circle r="10" fill="#F59E0B" filter="url(#glow-amber)"/>
+      <circle r="5"  fill="#0B0E11"/>
+    </g>
+    <g id="train-tpl-merge">
+      <circle r="10" fill="#A78BFA" filter="url(#glow-purple)"/>
+      <circle r="5"  fill="#0B0E11"/>
+    </g>
   </defs>
 
-  <!-- ── BACKGROUND GRID (subtle) ───────────────────────── -->
-  <rect width="900" height="520" fill="transparent"/>
+  <!-- ── RAILS ─────────────────────────────────────────────── -->
+  <!-- dim base layer -->
+  <path d="M 55,280 L 280,280" stroke="#007A6D" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M 280,280 C 320,280 360,120 430,120 L 650,120 C 720,120 760,280 800,280" stroke="#007A6D" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M 280,280 C 320,280 360,440 430,440 L 650,440 C 720,440 760,280 800,280" stroke="#92600A" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M 800,280 L 1060,280" stroke="#5B3FA0" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <!-- bright centerline glow -->
+  <path d="M 55,280 L 280,280" stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".5"/>
+  <path d="M 280,280 C 320,280 360,120 430,120 L 650,120 C 720,120 760,280 800,280" stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".5"/>
+  <path d="M 280,280 C 320,280 360,440 430,440 L 650,440 C 720,440 760,280 800,280" stroke="#F59E0B" stroke-width="2" stroke-linecap="round" fill="none" opacity=".5"/>
+  <path d="M 800,280 L 1060,280" stroke="#A78BFA" stroke-width="2" stroke-linecap="round" fill="none" opacity=".5"/>
 
-  <!-- ── TRACK RAILS ────────────────────────────────────── -->
-  <!-- Trunk rail (teal, pre-fork) -->
-  <path d="M 60,260 L 280,260"
-    stroke="#007A6D" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <!-- ── FORK ────────────────────────────────────────────────── -->
+  <circle cx="280" cy="280" r="9"  fill="#131820" stroke="#4A5568" stroke-width="2.5"/>
+  <circle cx="280" cy="280" r="4"  fill="#4A5568"/>
 
-  <!-- Speed track rail (teal) -->
-  <path d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
-    stroke="#007A6D" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <!-- ── MERGE ───────────────────────────────────────────────── -->
+  <circle cx="800" cy="280" r="9"  fill="#131820" stroke="#A78BFA" stroke-width="2.5"/>
+  <circle cx="800" cy="280" r="4"  fill="#A78BFA"/>
 
-  <!-- Batch track rail (amber) -->
-  <path d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
-    stroke="#92600A" stroke-width="5" stroke-linecap="round" fill="none"/>
-
-  <!-- Reconciliation rail (purple) -->
-  <path d="M 680,260 L 880,260"
-    stroke="#5B3FA0" stroke-width="5" stroke-linecap="round" fill="none"/>
-
-  <!-- ── ACTIVE GLOW (overlaid, same paths, thinner + bright) ── -->
-  <path d="M 60,260 L 280,260"
-    stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
-  <path d="M 280,260 C 310,260 340,148 390,148 L 560,148 C 610,148 640,260 680,260"
-    stroke="#00C9B1" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
-  <path d="M 280,260 C 310,260 340,372 390,372 L 560,372 C 610,372 640,260 680,260"
-    stroke="#F59E0B" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
-  <path d="M 680,260 L 880,260"
-    stroke="#A78BFA" stroke-width="2" stroke-linecap="round" fill="none" opacity=".45"/>
-
-  <!-- ── FORK DOT ────────────────────────────────────────── -->
-  <circle cx="280" cy="260" r="7" fill="#131820" stroke="#4A5568" stroke-width="2"/>
-  <circle cx="280" cy="260" r="3" fill="#4A5568"/>
-
-  <!-- ── MERGE DOT ───────────────────────────────────────── -->
-  <circle cx="680" cy="260" r="7" fill="#131820" stroke="#A78BFA" stroke-width="2"/>
-  <circle cx="680" cy="260" r="3" fill="#A78BFA"/>
-
-  <!-- ── STATION: KAFKA ─────────────────────────────────── -->
+  <!-- ── STATION: KAFKA (cx=80) ─────────────────────────────── -->
   <g class="station" data-id="kafka" style="cursor:pointer">
-    <circle cx="80" cy="260" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
-    <circle cx="80" cy="260" r="5" fill="#00C9B1"/>
-    <text x="80" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">KAFKA</text>
-    <text x="80" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Ingestion</text>
+    <circle cx="80"  cy="280" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
+    <circle cx="80"  cy="280" r="6"  fill="#00C9B1"/>
   </g>
 
-  <!-- ── STATION: FLINK ─────────────────────────────────── -->
+  <!-- ── STATION: FLINK (speed, cx=430, cy=120) ──────────────── -->
   <g class="station" data-id="flink" style="cursor:pointer">
-    <circle cx="390" cy="148" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
-    <circle cx="390" cy="148" r="5" fill="#00C9B1"/>
-    <text x="390" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">FLINK</text>
-    <text x="390" y="142" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Speed Layer</text>
-    <!-- speed track label -->
-    <text x="310" y="110" font-family="IBM Plex Mono,monospace" font-size="10" fill="#00C9B1" opacity=".6" letter-spacing=".06em">▲ speed track</text>
+    <circle cx="430" cy="120" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
+    <circle cx="430" cy="120" r="6"  fill="#00C9B1"/>
   </g>
 
-  <!-- ── STATION: DELTA LAKE ───────────────────────────── -->
+  <!-- ── STATION: DELTA LAKE (speed, cx=650, cy=120) ─────────── -->
   <g class="station" data-id="delta" style="cursor:pointer">
-    <circle cx="560" cy="148" r="11" fill="#131820" stroke="#00C9B1" stroke-width="2.5"/>
-    <circle cx="560" cy="148" r="5" fill="#00C9B1"/>
-    <text x="560" y="128" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#00C9B1" letter-spacing="0.08em">DELTA LAKE</text>
-    <text x="560" y="142" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Speed Store</text>
+    <circle cx="650" cy="120" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
+    <circle cx="650" cy="120" r="6"  fill="#00C9B1"/>
   </g>
 
-  <!-- ── STATION: SPARK + HIVE ─────────────────────────── -->
+  <!-- ── STATION: SPARK+HIVE (batch, cx=430, cy=440) ─────────── -->
   <g class="station" data-id="spark" style="cursor:pointer">
-    <circle cx="390" cy="372" r="11" fill="#131820" stroke="#F59E0B" stroke-width="2.5"/>
-    <circle cx="390" cy="372" r="5" fill="#F59E0B"/>
-    <text x="390" y="396" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#F59E0B" letter-spacing="0.08em">SPARK + HIVE</text>
-    <text x="390" y="408" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Batch Layer</text>
-    <!-- batch track label -->
-    <text x="310" y="432" font-family="IBM Plex Mono,monospace" font-size="10" fill="#F59E0B" opacity=".6" letter-spacing=".06em">▼ batch track</text>
+    <circle cx="430" cy="440" r="14" fill="#131820" stroke="#F59E0B" stroke-width="3"/>
+    <circle cx="430" cy="440" r="6"  fill="#F59E0B"/>
   </g>
 
-  <!-- ── STATION: BATCH RETRAIN ────────────────────────── -->
+  <!-- ── STATION: BATCH RETRAIN (batch, cx=650, cy=440) ──────── -->
   <g class="station" data-id="retrain" style="cursor:pointer">
-    <circle cx="560" cy="372" r="11" fill="#131820" stroke="#F59E0B" stroke-width="2.5"/>
-    <circle cx="560" cy="372" r="5" fill="#F59E0B"/>
-    <text x="560" y="396" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#F59E0B" letter-spacing="0.08em">BATCH RETRAIN</text>
-    <text x="560" y="408" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Day-5 Model</text>
+    <circle cx="650" cy="440" r="14" fill="#131820" stroke="#F59E0B" stroke-width="3"/>
+    <circle cx="650" cy="440" r="6"  fill="#F59E0B"/>
   </g>
 
-  <!-- ── STATION: RECONCILIATION ──────────────────────── -->
+  <!-- ── STATION: RECONCILIATION (cx=900, cy=280) ────────────── -->
   <g class="station" data-id="recon" style="cursor:pointer">
-    <circle cx="720" cy="260" r="13" fill="#131820" stroke="#A78BFA" stroke-width="3"/>
-    <circle cx="720" cy="260" r="6" fill="#A78BFA"/>
-    <text x="720" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#A78BFA" letter-spacing="0.08em">RECONCILIATION</text>
-    <text x="720" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#A78BFA" opacity=".6">98.43% agreement</text>
+    <circle cx="900" cy="280" r="17" fill="#131820" stroke="#A78BFA" stroke-width="3.5"/>
+    <circle cx="900" cy="280" r="7"  fill="#A78BFA"/>
   </g>
 
-  <!-- ── STATION: STREAMLIT ───────────────────────────── -->
+  <!-- ── STATION: STREAMLIT (cx=1050, cy=280) ────────────────── -->
   <g class="station" data-id="streamlit" style="cursor:pointer">
-    <circle cx="860" cy="260" r="11" fill="#131820" stroke="#A78BFA" stroke-width="2.5"/>
-    <circle cx="860" cy="260" r="5" fill="#A78BFA"/>
-    <text x="860" y="240" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="500" fill="#A78BFA" letter-spacing="0.08em">STREAMLIT</text>
-    <text x="860" y="254" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="9" fill="#4A5568">Dashboard</text>
+    <circle cx="1050" cy="280" r="14" fill="#131820" stroke="#A78BFA" stroke-width="3"/>
+    <circle cx="1050" cy="280" r="6"  fill="#A78BFA"/>
   </g>
 
-  <!-- ── TRAINS (positioned by JS) ────────────────────── -->
-  <g id="train-speed" opacity="0">
-    <circle r="9" fill="#00C9B1" filter="url(#glow-teal)"/>
-    <circle r="5" fill="#0B0E11"/>
-  </g>
-  <g id="train-batch" opacity="0">
-    <circle r="9" fill="#F59E0B" filter="url(#glow-amber)"/>
-    <circle r="5" fill="#0B0E11"/>
-  </g>
-  <g id="train-merge" opacity="0">
-    <circle r="9" fill="#A78BFA" filter="url(#glow-purple)"/>
-    <circle r="5" fill="#0B0E11"/>
+  <!-- ── TRAIN LAYER (JS populates) ───────────────────────────── -->
+  <g id="train-layer"></g>
+
+  <!-- ── LATENCY BADGE (updated by JS) ───────────────────────── -->
+  <g id="latency-badge" opacity="0">
+    <rect x="860" y="220" width="140" height="34" rx="6" fill="#1a1f2e" stroke="#A78BFA" stroke-width="1.5"/>
+    <text id="latency-text" x="930" y="242" text-anchor="middle"
+      font-family="IBM Plex Mono,monospace" font-size="13" fill="#A78BFA">—</text>
   </g>
 </svg>
 <div class="tooltip" id="tooltip"></div>
 </div>
 
 <div class="demo-btn-wrap">
-  <button class="demo-btn" id="demoBtn">▶ Send Transactions</button>
+  <button class="demo-btn" id="demoBtn">▶ Send Transaction</button>
 </div>
 
 <!-- ── KEY FINDINGS ──────────────────────────────────────── -->
@@ -608,135 +563,218 @@ footer {
   <span>Real-Time Fraud Detection · Lambda Architecture · PaySim Dataset</span>
 </footer>
 <script>
-// ── TRAIN ANIMATION ───────────────────────────────────────
+// ── MULTI-TRAIN ANIMATION ─────────────────────────────────
+// Timing is proportional to real pipeline latency:
+//   Kafka ingestion:   ~77µs/msg at 13k msg/s  → 300ms  (trunk, near-instant)
+//   Flink scoring:     ~2–5ms per record        → 700ms  (fast hot path)
+//   Delta MERGE:       ~3–5s (Spark commit)     → 1200ms (noticeable pause)
+//   Batch retraining:  minutes–hours            → 4000ms (visibly slow)
+//   Flink checkpoint:  10–15s                   → fires every ~12s independently
+//   Reconciliation:    seconds                  → 600ms
+//   Dashboard:         instant                  → 300ms
 (function() {
-  const DURATION_TRUNK  = 800;   // ms: Kafka → fork
-  const DURATION_TRACKS = 1400;  // ms: fork → merge (both tracks simultaneously)
-  const DURATION_RECON  = 900;   // ms: merge → dashboard
+  // ── TIMING (ms) ────────────────────────────────────────
+  const T_TRUNK   = 300;   // Kafka → fork
+  const T_SPEED   = 700;   // fork → Flink → Delta → merge (speed path)
+  const T_BATCH   = 4000;  // fork → Spark → Retrain → merge (batch path)
+  const T_RECON   = 600;   // merge → Reconciliation
+  const T_DASH    = 300;   // Reconciliation → Streamlit
 
-  function getPathLength(id) {
-    return document.getElementById(id).getTotalLength();
-  }
+  // ── STATE ───────────────────────────────────────────────
+  let trainCounter = 0;
+  const activeTrains = new Set();
+  const layer = document.getElementById('train-layer');
 
+  // Checkpoint pulse fires every 12s on the Flink station
+  setInterval(() => pulseStation('flink', '#00C9B1', 2.2), 12000);
+
+  // ── HELPERS ─────────────────────────────────────────────
   function pointAt(pathId, t) {
     const p = document.getElementById(pathId);
     const len = p.getTotalLength();
-    return p.getPointAtLength(Math.min(t, 1) * len);
+    return p.getPointAtLength(Math.min(Math.max(t, 0), 1) * len);
   }
 
-  function placeTrain(trainId, pt) {
-    const g = document.getElementById(trainId);
-    g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
+  function makeDot(type) {
+    // type: 'speed' | 'batch' | 'merge'
+    const colors = { speed: '#00C9B1', batch: '#F59E0B', merge: '#A78BFA' };
+    const filters = { speed: 'url(#glow-teal)', batch: 'url(#glow-amber)', merge: 'url(#glow-purple)' };
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('opacity', '0');
+
+    const outer = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    outer.setAttribute('r', '10');
+    outer.setAttribute('fill', colors[type]);
+    outer.setAttribute('filter', filters[type]);
+
+    const inner = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    inner.setAttribute('r', '4');
+    inner.setAttribute('fill', '#0B0E11');
+
+    g.appendChild(outer);
+    g.appendChild(inner);
+    layer.appendChild(g);
+    return g;
   }
 
-  function fadeIn(trainId) {
-    document.getElementById(trainId).setAttribute('opacity', '1');
-  }
-  function fadeOut(trainId) {
-    document.getElementById(trainId).setAttribute('opacity', '0');
+  function place(dot, pt) {
+    dot.setAttribute('transform', `translate(${pt.x.toFixed(2)},${pt.y.toFixed(2)})`);
   }
 
-  function pulseStation(stationId) {
-    const g = document.querySelector(`[data-id="${stationId}"] circle:first-child`);
-    if (!g) return;
-    const orig = g.getAttribute('r');
+  function show(dot) { dot.setAttribute('opacity', '1'); }
+  function hide(dot) { dot.setAttribute('opacity', '0'); }
+
+  function removeDot(dot) {
+    if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+  }
+
+  function pulseStation(stationId, color, scale) {
+    const outer = document.querySelector(`[data-id="${stationId}"] circle:first-child`);
+    if (!outer) return;
+    const orig = parseFloat(outer.getAttribute('r'));
+    const target = orig * (scale || 1.8);
     let start = null;
     function step(ts) {
       if (!start) start = ts;
-      const t = (ts - start) / 300;
+      const t = (ts - start) / 400;
       if (t < 1) {
-        const scale = 1 + 0.5 * Math.sin(t * Math.PI);
-        g.setAttribute('r', parseFloat(orig) * scale);
+        const r = orig + (target - orig) * Math.sin(t * Math.PI);
+        outer.setAttribute('r', r.toFixed(2));
         requestAnimationFrame(step);
       } else {
-        g.setAttribute('r', orig);
+        outer.setAttribute('r', orig.toFixed(2));
       }
     }
     requestAnimationFrame(step);
   }
 
-  function animate(btn) {
-    btn.disabled = true;
-    let startTs = null;
-
-    // Phase 1: trunk (both trains together as one teal dot)
-    fadeIn('train-speed');
-    placeTrain('train-speed', pointAt('path-trunk', 0));
-
-    function phase1(ts) {
-      if (!startTs) startTs = ts;
-      const t = (ts - startTs) / DURATION_TRUNK;
+  // ── TWEEN ───────────────────────────────────────────────
+  // Moves dot along pathId from t=0→1 over `duration` ms, then calls cb
+  function tween(dot, pathId, duration, cb) {
+    let start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      const t = (ts - start) / duration;
       if (t < 1) {
-        placeTrain('train-speed', pointAt('path-trunk', t));
-        requestAnimationFrame(phase1);
+        place(dot, pointAt(pathId, t));
+        requestAnimationFrame(step);
       } else {
-        placeTrain('train-speed', pointAt('path-trunk', 1));
-        // Fork: launch batch train too
-        fadeIn('train-batch');
-        placeTrain('train-batch', pointAt('path-trunk', 1));
-        pulseStation('kafka');
-        startTs = null;
-        requestAnimationFrame(phase2);
+        place(dot, pointAt(pathId, 1));
+        if (cb) cb();
       }
     }
-
-    // Phase 2: both tracks in parallel
-    function phase2(ts) {
-      if (!startTs) startTs = ts;
-      const t = (ts - startTs) / DURATION_TRACKS;
-      if (t < 1) {
-        placeTrain('train-speed', pointAt('path-speed', t));
-        placeTrain('train-batch', pointAt('path-batch', t));
-        requestAnimationFrame(phase2);
-      } else {
-        placeTrain('train-speed', pointAt('path-speed', 1));
-        placeTrain('train-batch', pointAt('path-batch', 1));
-        // Merge: hide both, show purple
-        fadeOut('train-speed');
-        fadeOut('train-batch');
-        fadeIn('train-merge');
-        placeTrain('train-merge', pointAt('path-recon', 0));
-        pulseStation('flink');
-        pulseStation('spark');
-        pulseStation('delta');
-        pulseStation('retrain');
-        startTs = null;
-        requestAnimationFrame(phase3);
-      }
-    }
-
-    // Phase 3: reconciliation track
-    function phase3(ts) {
-      if (!startTs) startTs = ts;
-      const t = (ts - startTs) / DURATION_RECON;
-      if (t < 1) {
-        placeTrain('train-merge', pointAt('path-recon', t));
-        requestAnimationFrame(phase3);
-      } else {
-        placeTrain('train-merge', pointAt('path-recon', 1));
-        pulseStation('recon');
-        pulseStation('streamlit');
-        // Fade out and re-enable
-        setTimeout(() => {
-          fadeOut('train-merge');
-          btn.disabled = false;
-        }, 600);
-      }
-    }
-
-    requestAnimationFrame(phase1);
+    requestAnimationFrame(step);
   }
 
+  // ── LATENCY BADGE ───────────────────────────────────────
+  let latencyStart = null;
+  let latencyAnimId = null;
+
+  function startLatencyTimer() {
+    latencyStart = performance.now();
+    const badge = document.getElementById('latency-badge');
+    const txt   = document.getElementById('latency-text');
+    badge.setAttribute('opacity', '1');
+
+    function tick() {
+      const ms = performance.now() - latencyStart;
+      txt.textContent = ms < 1000 ? `${ms.toFixed(0)} ms` : `${(ms/1000).toFixed(2)} s`;
+      latencyAnimId = requestAnimationFrame(tick);
+    }
+    if (latencyAnimId) cancelAnimationFrame(latencyAnimId);
+    latencyAnimId = requestAnimationFrame(tick);
+  }
+
+  function stopLatencyTimer(finalMs) {
+    if (latencyAnimId) { cancelAnimationFrame(latencyAnimId); latencyAnimId = null; }
+    const txt = document.getElementById('latency-text');
+    const s   = finalMs / 1000;
+    txt.textContent = s < 1 ? `${finalMs.toFixed(0)} ms` : `${s.toFixed(2)} s`;
+    // fade badge out after 2.5s
+    setTimeout(() => {
+      document.getElementById('latency-badge').setAttribute('opacity', '0');
+    }, 2500);
+  }
+
+  // ── LAUNCH TRAIN ────────────────────────────────────────
+  function launchTrain() {
+    const id = ++trainCounter;
+    const isFirst = activeTrains.size === 0;
+    activeTrains.add(id);
+
+    if (isFirst) startLatencyTimer();
+
+    const tStart = performance.now();
+
+    const speedDot = makeDot('speed');
+    const batchDot = makeDot('batch');
+
+    // Phase 1: trunk — single teal dot, Kafka ingestion
+    place(speedDot, pointAt('path-trunk', 0));
+    show(speedDot);
+    pulseStation('kafka', '#00C9B1');
+
+    tween(speedDot, 'path-trunk', T_TRUNK, () => {
+      // Phase 2: fork — speed and batch launch simultaneously
+      place(batchDot, pointAt('path-speed', 0));
+      show(batchDot);
+      pulseStation('flink', '#00C9B1');
+      pulseStation('spark', '#F59E0B');
+
+      let speedDone = false;
+      let batchDone = false;
+
+      const mergeDot = makeDot('merge');
+
+      function onTrackDone() {
+        if (!speedDone || !batchDone) return;
+        // Both tracks arrived at merge — show purple
+        hide(speedDot); removeDot(speedDot);
+        hide(batchDot); removeDot(batchDot);
+        place(mergeDot, pointAt('path-recon', 0));
+        show(mergeDot);
+        pulseStation('delta',   '#00C9B1');
+        pulseStation('retrain', '#F59E0B');
+
+        // Phase 3: recon track
+        tween(mergeDot, 'path-recon', T_RECON + T_DASH, () => {
+          pulseStation('recon',      '#A78BFA', 2.2);
+          pulseStation('streamlit',  '#A78BFA');
+          setTimeout(() => {
+            hide(mergeDot); removeDot(mergeDot);
+            activeTrains.delete(id);
+            if (activeTrains.size === 0) {
+              stopLatencyTimer(performance.now() - tStart);
+            }
+          }, 400);
+        });
+      }
+
+      // Speed path (fast — Flink hot path)
+      tween(speedDot, 'path-speed', T_SPEED, () => {
+        speedDone = true;
+        onTrackDone();
+      });
+
+      // Batch path (slow — Spark window functions + retrain)
+      tween(batchDot, 'path-batch', T_BATCH, () => {
+        batchDone = true;
+        onTrackDone();
+      });
+    });
+  }
+
+  // ── BUTTON ──────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', function() {
     const btn = document.getElementById('demoBtn');
-    if (btn) btn.addEventListener('click', () => animate(btn));
+    if (btn) btn.addEventListener('click', launchTrain);
 
     // ── TOOLTIPS ─────────────────────────────────────────
     const tip = document.getElementById('tooltip');
     const metroWrap = document.querySelector('.metro-wrap');
 
     document.querySelectorAll('.station').forEach(g => {
-      g.addEventListener('mouseenter', function(e) {
+      g.addEventListener('mouseenter', function() {
         const id = this.dataset.id;
         const s = (window.STATIONS || []).find(s => s.id === id);
         if (!s) return;
@@ -756,10 +794,11 @@ footer {
       });
     });
   });
+
 })();
 
-// ── CONTENT DATA ─────────────────────────────────────────
-const STATIONS = [
+// ── STATION TOOLTIP DATA ─────────────────────────────────
+window.STATIONS = [
   {
     id: 'kafka', x: 80, y: 260, track: 'trunk',
     label: 'KAFKA', sub: 'Ingestion',
