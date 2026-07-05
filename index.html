@@ -61,6 +61,7 @@ a:hover { text-decoration: underline; }
   text-transform: uppercase;
   color: var(--teal);
   margin-bottom: 16px;
+  text-align: center;
 }
 .hero h1 {
   font-family: var(--font-head);
@@ -320,20 +321,112 @@ footer {
   color: var(--muted);
   letter-spacing: .06em;
 }
+footer .footer-links { margin-top: 10px; display: flex; gap: 18px; justify-content: center; }
+footer a { color: var(--dim); }
+footer a:hover { color: var(--teal); }
+
+/* ── NAV ────────────────────────────────────────────────── */
+.topnav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(11,14,17,.88);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.topnav-inner {
+  max-width: 960px; margin: 0 auto; padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+}
+.topnav-brand { font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.topnav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.topnav-links a { font-family: var(--font-mono); font-size: 12px; color: var(--dim); letter-spacing: .04em; }
+.topnav-links a:hover { color: var(--teal); }
+.topnav-cta {
+  font-family: var(--font-mono); font-size: 12px;
+  border: 1px solid var(--teal-dim); color: var(--teal);
+  padding: 6px 14px; border-radius: 4px;
+}
+.topnav-cta:hover { background: var(--teal); color: var(--bg); text-decoration: none; }
+
+/* ── LEGEND ─────────────────────────────────────────────── */
+.legend {
+  display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+  margin: 4px 0 8px; font-family: var(--font-mono); font-size: 12px; color: var(--dim);
+}
+.legend .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+.legend .dot.teal { background: var(--teal); }
+.legend .dot.amber { background: var(--amber); }
+.legend .dot.purple { background: var(--purple); }
+.map-caption {
+  text-align: center; font-size: 12.5px; color: var(--muted);
+  margin: 0 0 10px; font-family: var(--font-mono);
+}
+.disclosure {
+  max-width: 520px; margin: 0 auto 6px; text-align: center;
+  font-size: 12px; color: var(--muted); line-height: 1.5;
+}
+
+/* ── PLAIN-ENGLISH INTRO ────────────────────────────────── */
+.plain-intro {
+  max-width: 620px; margin: 0 auto 36px; text-align: center;
+  font-size: 15px; color: var(--dim); line-height: 1.65;
+}
+.plain-intro strong { color: var(--text); }
+
+/* ── TIMELINE ───────────────────────────────────────────── */
+.timeline { display: flex; flex-direction: column; gap: 14px; }
+.timeline-item {
+  display: grid; grid-template-columns: 84px 1fr; gap: 16px;
+  padding: 14px 0; border-bottom: 1px solid var(--border);
+}
+.timeline-item:last-child { border-bottom: none; }
+.timeline-day {
+  font-family: var(--font-mono); font-size: 12px; color: var(--teal); letter-spacing: .05em;
+}
+.timeline-text { font-size: 13.5px; color: var(--dim); line-height: 1.55; }
+.timeline-text strong { color: var(--text); }
+
+/* ── ACCESSIBILITY ──────────────────────────────────────── */
+.demo-btn:focus-visible, .topnav-cta:focus-visible, a:focus-visible {
+  outline: 2px solid var(--teal); outline-offset: 3px;
+}
+.station { outline: none; }
+.station:focus-visible circle:first-child {
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,.5));
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
 </style>
 </head>
 <body>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <div class="topnav-links">
+      <a href="#demo">Live demo</a>
+      <a href="#timeline">Build log</a>
+      <a href="#findings">Findings</a>
+      <a href="#decisions">Architecture</a>
+      <a href="#limitations">Limitations</a>
+    </div>
+    <a class="topnav-cta" href="https://github.com/shivankbhatia/fraud_lambda" target="_blank" rel="noopener">View source ↗</a>
+  </div>
+</nav>
+
 <div class="page" id="app">
 
 <!-- ── HERO ──────────────────────────────────────────────── -->
 <header class="hero">
-  <p class="hero-eyebrow">Portfolio Project · Lambda Architecture</p>
   <h1>Real-Time <span class="speed">Fraud Detection</span><br>meets <span class="batch">Batch Retraining</span>,<br>reconciled by <span class="recon">Delta Lake</span></h1>
-  <p class="hero-sub">Kafka + Flink score every transaction live. Spark retrains nightly. A reconciliation layer measures exactly where they disagree — and why.</p>
+  <p class="hero-sub">Kafka + Flink score every transaction live. Spark independently retrains on the full history. A reconciliation layer measures exactly where the two disagree — and why.</p>
 </header>
 
+<p class="plain-intro">In plain terms: most systems either respond <strong>instantly with incomplete information</strong>, or wait for <strong>complete information and respond slowly</strong>. This project builds both paths side by side, on the same transactions, and measures precisely how much accuracy the fast path gives up for speed — <strong>1.57%</strong> disagreement, in this case, and it traces back to one specific, explainable cause below.</p>
+
 <!-- ── KPI STRIP ─────────────────────────────────────────── -->
-<div class="kpi-strip">
+<div class="kpi-strip" id ="demo">
   <div class="kpi"><div class="kpi-val purple">98.43%</div><div class="kpi-label">Agreement Rate</div></div>
   <div class="kpi"><div class="kpi-val teal">100%</div><div class="kpi-label">Speed Recall</div></div>
   <div class="kpi"><div class="kpi-val white">24,327</div><div class="kpi-label">Transactions Joined</div></div>
@@ -403,43 +496,43 @@ footer {
   <circle cx="800" cy="280" r="4"  fill="#A78BFA"/>
 
   <!-- ── STATION: KAFKA (cx=80) ─────────────────────────────── -->
-  <g class="station" data-id="kafka" style="cursor:pointer">
+  <g class="station" data-id="kafka" style="cursor:pointer" tabindex="0" role="button" aria-label="kafka station, hover or focus for detail">
     <circle cx="80"  cy="280" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
     <circle cx="80"  cy="280" r="6"  fill="#00C9B1"/>
   </g>
 
   <!-- ── STATION: FLINK (speed, cx=430, cy=120) ──────────────── -->
-  <g class="station" data-id="flink" style="cursor:pointer">
+  <g class="station" data-id="flink" style="cursor:pointer" tabindex="0" role="button" aria-label="flink station, hover or focus for detail">
     <circle cx="430" cy="120" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
     <circle cx="430" cy="120" r="6"  fill="#00C9B1"/>
   </g>
 
   <!-- ── STATION: DELTA LAKE (speed, cx=650, cy=120) ─────────── -->
-  <g class="station" data-id="delta" style="cursor:pointer">
+  <g class="station" data-id="delta" style="cursor:pointer" tabindex="0" role="button" aria-label="delta station, hover or focus for detail">
     <circle cx="650" cy="120" r="14" fill="#131820" stroke="#00C9B1" stroke-width="3"/>
     <circle cx="650" cy="120" r="6"  fill="#00C9B1"/>
   </g>
 
   <!-- ── STATION: SPARK+HIVE (batch, cx=430, cy=440) ─────────── -->
-  <g class="station" data-id="spark" style="cursor:pointer">
+  <g class="station" data-id="spark" style="cursor:pointer" tabindex="0" role="button" aria-label="spark station, hover or focus for detail">
     <circle cx="430" cy="440" r="14" fill="#131820" stroke="#F59E0B" stroke-width="3"/>
     <circle cx="430" cy="440" r="6"  fill="#F59E0B"/>
   </g>
 
   <!-- ── STATION: BATCH RETRAIN (batch, cx=650, cy=440) ──────── -->
-  <g class="station" data-id="retrain" style="cursor:pointer">
+  <g class="station" data-id="retrain" style="cursor:pointer" tabindex="0" role="button" aria-label="retrain station, hover or focus for detail">
     <circle cx="650" cy="440" r="14" fill="#131820" stroke="#F59E0B" stroke-width="3"/>
     <circle cx="650" cy="440" r="6"  fill="#F59E0B"/>
   </g>
 
   <!-- ── STATION: RECONCILIATION (cx=900, cy=280) ────────────── -->
-  <g class="station" data-id="recon" style="cursor:pointer">
+  <g class="station" data-id="recon" style="cursor:pointer" tabindex="0" role="button" aria-label="recon station, hover or focus for detail">
     <circle cx="900" cy="280" r="17" fill="#131820" stroke="#A78BFA" stroke-width="3.5"/>
     <circle cx="900" cy="280" r="7"  fill="#A78BFA"/>
   </g>
 
   <!-- ── STATION: STREAMLIT (cx=1050, cy=280) ────────────────── -->
-  <g class="station" data-id="streamlit" style="cursor:pointer">
+  <g class="station" data-id="streamlit" style="cursor:pointer" tabindex="0" role="button" aria-label="streamlit station, hover or focus for detail">
     <circle cx="1050" cy="280" r="14" fill="#131820" stroke="#A78BFA" stroke-width="3"/>
     <circle cx="1050" cy="280" r="6"  fill="#A78BFA"/>
   </g>
@@ -457,12 +550,51 @@ footer {
 <div class="tooltip" id="tooltip"></div>
 </div>
 
+<p class="hero-eyebrow" >Lambda architecture</p>
+<p class="map-caption">Hover any station for detail · click below to watch one transaction move through both pipelines</p>
+<div class="legend">
+  <span><span class="dot teal"></span>Speed layer (Flink → Delta Lake)</span>
+  <span><span class="dot amber"></span>Batch layer (Spark → Hive)</span>
+  <span><span class="dot purple"></span>Reconciliation</span>
+</div>
 <div class="demo-btn-wrap">
-  <button class="demo-btn" id="demoBtn">▶ Send Transaction</button>
+  <button class="demo-btn" id="demoBtn">▶ Simulate a transaction</button>
+  <p class="disclosure">This animation is a calibrated simulation of the real pipeline's behavior, not a live backend call — the stations, code, and results elsewhere on this page are from the actual project.</p>
 </div>
 
 <!-- ── KEY FINDINGS ──────────────────────────────────────── -->
-<section>
+<section id="timeline">
+  <p class="section-eyebrow">Process</p>
+  <h2 class="section-title">How It Was Built — 7 Days</h2>
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-day">Day 1</div>
+      <div class="timeline-text"><strong>EDA + leakage investigation.</strong> Found and removed a feature that scored 0.947 AUC alone — traced to a PaySim simulator artifact, not real fraud signal. Locked in a 4-feature model via walk-forward validation.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-day">Day 2</div>
+      <div class="timeline-text"><strong>Kafka producer.</strong> Time-ordered replay of PaySim, keyed by destination account. Measured 13,316 msg/s sustained throughput; verified per-key ordering held across partitions.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-day">Days 3–4</div>
+      <div class="timeline-text"><strong>Flink speed layer.</strong> Stateful per-account counter in Flink's ValueState, live XGBoost scoring, checkpointed writes to Delta Lake. The hardest infrastructure stretch of the week — PyFlink's Python↔JVM bridge required resolving a long, specific dependency chain before a single record would flow.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-day">Day 5</div>
+      <div class="timeline-text"><strong>Spark batch layer + Hive.</strong> Retrained on the full 2,770,409-row historical dataset via Spark window functions, wrote curated predictions to a real Hive Metastore table.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-day">Day 6</div>
+      <div class="timeline-text"><strong>Reconciliation.</strong> Joined speed vs. batch predictions on a composite key across 24,327 transactions. Found 98.43% agreement and diagnosed the exact mechanism behind the remaining disagreements.</div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-day">Day 7</div>
+      <div class="timeline-text"><strong>Dashboard + this page.</strong> Streamlit dashboard for the reconciliation results, architecture diagram, and final documentation.</div>
+    </div>
+  </div>
+</section>
+
+<section id="findings">
   <p class="section-eyebrow">Analysis</p>
   <h2 class="section-title">Key Findings</h2>
   <div class="cards">
@@ -484,13 +616,13 @@ footer {
     <div class="card purple">
       <div class="card-num">04 / Reconciliation</div>
       <h3>Cold-Start Explains the Gap</h3>
-      <p>Speed layer achieves <strong>100% recall</strong>; batch missed 1 fraud case. The 1.57% disagreement traces almost entirely to <strong>dest_txn_count_so_far</strong> — Flink's state starts at 0 on startup, Spark has complete history. An architectural tradeoff, not a bug.</p>
+      <p>Speed layer: <strong>PR-AUC 0.8475</strong>, 100% recall. Batch layer: <strong>PR-AUC 0.8187</strong>, missed 1 fraud case the speed layer caught. The 1.57% disagreement traces almost entirely to <strong>dest_txn_count_so_far</strong> — Flink's state starts at 0 on startup, Spark has complete history. An architectural tradeoff, not a bug.</p>
     </div>
   </div>
 </section>
 
 <!-- ── DESIGN DECISIONS ──────────────────────────────────── -->
-<section>
+<section id="decisions">
   <p class="section-eyebrow">Architecture</p>
   <h2 class="section-title">Design Decisions &amp; Tradeoffs</h2>
   <table class="decisions-table">
@@ -545,7 +677,7 @@ footer {
 </section>
 
 <!-- ── KNOWN LIMITATIONS ──────────────────────────────────── -->
-<section>
+<section id="limitations">
   <p class="section-eyebrow">Honesty</p>
   <h2 class="section-title">Known Limitations</h2>
   <ul class="limits-list">
@@ -560,27 +692,41 @@ footer {
 </div><!-- /.page -->
 
 <footer>
-  <span>Real-Time Fraud Detection · Lambda Architecture · PaySim Dataset</span>
+  <span>Real-Time Fraud Detection</span>
+  <div class="footer-links">
+    <a href="https://github.com/shivankbhatia/fraud_lambda" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://linkedin.com/in/shivankbhatia" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="mailto:bhatiashivank834@gmail.com">Email</a>
+  </div>
 </footer>
 <script>
 // ── MULTI-TRAIN ANIMATION ─────────────────────────────────
-// Timing proportional to real pipeline latency:
-//   Kafka ingestion  ~77µs/msg @ 13k/s  → 400ms  trunk
-//   Flink scoring    ~2–5ms/record       → 1200ms fork→Flink, then 800ms Flink→Delta
-//   Delta MERGE      ~3–5s Spark commit  → 1000ms Delta→merge
-//   Batch (Spark)    minutes–hours       → 4500ms total (visibly slow vs speed)
-//   Flink checkpoint 10–15s              → independent pulse every 12s
-//   Reconciliation   seconds             → 700ms
-//   Dashboard        instant             → 300ms
+// Animation pacing is illustrative, not a literal latency simulation —
+// but anchored to real, measured facts from the project where we have them:
+//   Kafka producer   measured 13,316 msg/s sustained (10,000 msgs in 0.751s).
+//                     The real workload only needs ~7 msg/s, so pacing here
+//                     is deliberately slowed down for visibility, not sped up.
+//   Flink checkpoint configured at exactly 10s (enable_checkpointing(10000)) —
+//                     pulsed on that real interval below, not a guess.
+//   Batch (Spark)    re-reads the full historical dataset (2,770,409 rows)
+//                     and retrains — genuinely much slower than the speed
+//                     path in the real system, shown slower here for that reason.
+//   Reconciliation   joins on txn_key against a real 24,327-row result set.
 (function() {
+  // Respect prefers-reduced-motion: compress all animation durations to
+  // near-instant rather than skipping the demo entirely, so the result
+  // (stations pulsing, dashboard updating) is still visible.
+  const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DUR = (ms) => REDUCED_MOTION ? 1 : ms;
+
   // ── TIMING (ms) ────────────────────────────────────────
-  const T_TRUNK        = 400;   // Kafka → fork
-  const T_SPEED_TO_FLINK = 1200; // fork → Flink station
-  const T_FLINK_TO_DELTA = 800;  // Flink → Delta (scoring hot path)
-  const T_DELTA_TO_MERGE = 600;  // Delta → merge point
-  const T_BATCH        = 4500;  // fork → merge (full batch path, slow)
-  const T_RECON        = 700;   // merge → Reconciliation
-  const T_DASH         = 300;   // Reconciliation → Streamlit
+  const T_TRUNK        = DUR(400);   // Kafka → fork
+  const T_SPEED_TO_FLINK = DUR(1200); // fork → Flink station
+  const T_FLINK_TO_DELTA = DUR(800);  // Flink → Delta (scoring hot path)
+  const T_DELTA_TO_MERGE = DUR(600);  // Delta → merge point
+  const T_BATCH        = DUR(4500);  // fork → merge (full batch path, slow)
+  const T_RECON        = DUR(700);   // merge → Reconciliation
+  const T_DASH         = DUR(300);   // Reconciliation → Streamlit
 
   // ── BASE RADII (fixed, never read from DOM) ─────────────
   // Prevents concurrent pulses from compounding the radius
@@ -725,27 +871,6 @@ footer {
     }, 2500);
   }
 
-  // ── PARTIAL PATH TWEEN ──────────────────────────────────
-  // Animates dot along a sub-segment [t0, t1] of pathId over duration ms
-  function tweenSegment(dot, pathId, t0, t1, duration, cb) {
-    var p   = document.getElementById(pathId);
-    var len = p.getTotalLength();
-    var start = null;
-    function step(ts) {
-      if (!start) start = ts;
-      var progress = Math.min((ts - start) / duration, 1);
-      var t = t0 + (t1 - t0) * progress;
-      var pt = p.getPointAtLength(t * len);
-      dot.setAttribute('transform', 'translate(' + pt.x.toFixed(2) + ',' + pt.y.toFixed(2) + ')');
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else if (cb) {
-        cb();
-      }
-    }
-    requestAnimationFrame(step);
-  }
-
   // ── LAUNCH TRAIN ────────────────────────────────────────
   // Speed path split into 3 segments so Flink and Delta each get
   // a distinct arrival pulse with realistic relative timing.
@@ -827,8 +952,9 @@ footer {
   document.addEventListener('DOMContentLoaded', function() {
     layer = document.getElementById('train-layer');
 
-    // Checkpoint pulse: fires every 12s independently, simulates Flink checkpoint interval
-    setInterval(function() { pulseStation('flink', 1.5); }, 12000);
+    // Checkpoint pulse: fires every 10s — the exact interval configured via
+    // env.enable_checkpointing(10000) in the real Flink job, not an approximation
+    setInterval(function() { pulseStation('flink', 1.5); }, 10000);
 
     var btn = document.getElementById('demoBtn');
     if (btn) btn.addEventListener('click', launchTrain);
@@ -856,6 +982,21 @@ footer {
       g.addEventListener('mouseleave', function() {
         tip.classList.remove('visible');
       });
+      // Keyboard equivalent of hover, positioned near the station itself
+      g.addEventListener('focus', function() {
+        var sid = this.dataset.id;
+        var s = (window.STATIONS || []).find(function(x) { return x.id === sid; });
+        if (!s) return;
+        tip.innerHTML = '<strong>' + s.label + '</strong><span>' + s.desc + '</span>';
+        var box = this.getBoundingClientRect();
+        var rect = metroWrap.getBoundingClientRect();
+        tip.style.left = (box.left - rect.left + 20) + 'px';
+        tip.style.top = (box.top - rect.top - 10) + 'px';
+        tip.classList.add('visible');
+      });
+      g.addEventListener('blur', function() {
+        tip.classList.remove('visible');
+      });
     });
   });
 
@@ -866,7 +1007,7 @@ window.STATIONS = [
   {
     id: 'kafka', x: 80, y: 260, track: 'trunk',
     label: 'KAFKA', sub: 'Ingestion',
-    desc: 'Python producer replays PaySim as a live time-ordered stream, keyed by nameDest to preserve per-account ordering for stateful downstream processing.'
+    desc: 'Python producer replays PaySim as a live time-ordered stream, keyed by nameDest to preserve per-account ordering. Measured throughput: 13,316 msg/s sustained.'
   },
   {
     id: 'flink', x: 390, y: 148, track: 'speed',
